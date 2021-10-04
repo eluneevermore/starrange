@@ -1,0 +1,104 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import map from './map'
+
+const COLOR = [
+  'lightgray',
+  'red',
+  'green',
+  'blue',
+  'orange',
+  'purple'
+]
+
+const Background = ({ position, background, onSelect }) => {
+  const [x, y] = position
+
+  return (
+    <circle pointerEvents='all' cx={x} cy={y} r={25} stroke={COLOR[background]} fill='none' strokeWidth={5} onClick={onSelect} />
+  )
+}
+
+const Star = ({ position, color, selected }) => {
+  const [x, y] = position
+  return (
+    <circle cx={x} cy={y} r={15} fill={color === 0 ? "none" : COLOR[color]} className={selected ? 'selected' : ''} />
+  )
+}
+
+const Edge = ({ edge }) => {
+  const [_, __, [x1, y1], [x2, y2]] = edge
+  return (
+    <line {...{ x1, y1, x2, y2 }} stroke='black' strokeWidth={2} />
+  )
+}
+
+const swap = (ar, x, y) => {
+  const newAr = ar.slice(0)
+  newAr[x] = ar[y]
+  newAr[y] = ar[x]
+  return newAr
+}
+
+const App = () => {
+  const [level, setLevel] = useState(0)
+  const [positions, setPositions] = useState([])
+  const [backgrounds, setBackgrounds] = useState([])
+  const [colors, setColors] = useState([])
+  const [relations, setRelations] = useState([])
+  const [starNodes, setStarNodes] = useState([])
+  const [node, setNode] = useState(null)
+
+  useEffect(() => {
+    const [positions, backgrounds, colors, relations] = JSON.parse(JSON.stringify(map[level]))
+    setPositions(positions)
+    setBackgrounds(backgrounds)
+    setColors(colors)
+    setRelations(relations)
+    setStarNodes(Array.from({ length: colors.length }, (_, i) => i))
+  }, [map, level, setPositions, setBackgrounds, setColors, setRelations, setStarNodes])
+
+  const edges = useMemo(() => {
+    return relations.reduce((edges, endPoints, startPoint) => {
+      edges.push(...endPoints.map(endPoint => [startPoint, endPoint, positions[startPoint], positions[endPoint]]))
+      return edges
+    }, [])
+  }, [positions, relations])
+
+  const nodeStars = useMemo(() => {
+    return starNodes.reduce((c, node, idx) => Object.assign(c, { [node]: idx }), {})
+  }, [starNodes])
+
+  const select = useCallback((targetNode) => {
+    if (node != null && relations[node].includes(targetNode)) {
+      const star = nodeStars[node]
+      const newStar = nodeStars[targetNode]
+      setStarNodes(swap(starNodes, star, newStar))
+      setNode(null)
+    } else {
+      setNode(targetNode)
+    }
+  }, [node, colors, starNodes, nodeStars])
+
+  return (
+    <div>
+      <svg viewBox="0 0 1000 1000">
+        {edges.map((edge, idx) =>
+          <Edge key={idx} edge={edge} onSelect={() => select(idx)} />
+        )}
+        {starNodes.map((curIdx, idx) =>
+          <Star key={idx} color={colors[idx]} position={positions[curIdx]} selected={starNodes[idx] === node} />
+        )}
+        {positions.map((position, idx) =>
+          <Background key={idx}
+            position={position}
+            background={backgrounds[idx]}
+            color={colors[idx]}
+            selected={idx === node}
+            onSelect={() => select(idx)} />
+        )}
+      </svg>
+    </div>
+  )
+}
+
+export default App

@@ -1,0 +1,13 @@
+@keyframes beating {
+  from { transform: scale(1); }
+  to { transform: scale(0.8) translate(20%, 20%); }
+}
+
+circle.selected {
+  transform-box: fill-box;
+  animation: beating 0.5s infinite alternate;
+}
+
+.node {
+  cursor: pointer;
+}
